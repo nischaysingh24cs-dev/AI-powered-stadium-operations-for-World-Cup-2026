@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAnthropicClient, MODEL } from '@/lib/anthropic';
+import { getAIClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
 
 const SYSTEM_PROMPT = `You are the Safety & Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium.
 
-You will receive a natural-language description of what a stadium CCTV camera is seeing, as if produced by a vision-language model (e.g. CLIP + object detection).
+You will receive a natural-language description of what a stadium CCTV camera is seeing, as if produced by a vision-language model.
 
 Return a JSON object with exactly these fields:
 - "severity": one of "low", "medium", "high", "critical"
@@ -30,29 +30,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const anthropic = getAnthropicClient();
+    const model = getAIClient();
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 300,
-      system: SYSTEM_PROMPT,
-      messages: [
+    const result = await model.generateContent({
+      contents: [
         {
           role: 'user',
-          content: `Camera: ${camera ?? 'Unknown'}\n\nDescription: ${description}\n\nProvide the triage assessment as JSON.`,
+          parts: [{ text: `Camera: ${camera ?? 'Unknown'}\n\nDescription: ${description}\n\nProvide the triage assessment as JSON.` }],
         },
       ],
+      systemInstruction: SYSTEM_PROMPT,
     });
 
-    const textBlock = response.content.find((c) => c.type === 'text');
-    const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    const rawText = result.response.text();
 
-    let result;
+    let triageResult;
     try {
       const jsonStr = rawText.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      result = JSON.parse(jsonStr);
+      triageResult = JSON.parse(jsonStr);
     } catch {
-      result = {
+      triageResult = {
         severity: 'medium',
         riskScore: 5,
         category: 'unknown',
@@ -61,7 +58,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(triageResult);
   } catch (err: any) {
     console.error('Triage error:', err);
     return NextResponse.json(

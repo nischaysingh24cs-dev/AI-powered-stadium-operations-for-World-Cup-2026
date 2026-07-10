@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAnthropicClient, MODEL } from '@/lib/anthropic';
+import { getAIClient } from '@/lib/ai';
 import type { Gate, OpsAlert, StadiumStats } from '@/lib/simulate';
 
 export const runtime = 'nodejs';
@@ -26,24 +26,21 @@ export async function POST(req: NextRequest) {
     const alerts: OpsAlert[] = body.alerts ?? [];
     const stats: StadiumStats | undefined = body.stats;
 
-    const anthropic = getAnthropicClient();
+    const model = getAIClient();
 
     const snapshot = JSON.stringify({ gates, alerts, stats }, null, 2);
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 400,
-      system: SYSTEM_PROMPT,
-      messages: [
+    const result = await model.generateContent({
+      contents: [
         {
           role: 'user',
-          content: `Here is the current live snapshot:\n\n${snapshot}\n\nGenerate the briefing now.`,
+          parts: [{ text: `Here is the current live snapshot:\n\n${snapshot}\n\nGenerate the briefing now.` }],
         },
       ],
+      systemInstruction: SYSTEM_PROMPT,
     });
 
-    const textBlock = response.content.find((c) => c.type === 'text');
-    const briefing = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    const briefing = result.response.text();
 
     return NextResponse.json({ briefing });
   } catch (err: any) {

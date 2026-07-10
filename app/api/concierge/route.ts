@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAnthropicClient, MODEL } from '@/lib/anthropic';
+import { getAIClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +22,7 @@ You can help with:
 Style rules:
 - Be warm, concise, and concrete. Prefer short paragraphs or a short list over long prose.
 - If you don't have a specific real-time fact (like an exact live queue time), say so honestly and give the most helpful general guidance instead of inventing a precise number.
-- Never claim to have live sensor access — you can reference that "current wait time" data would come from the stadium's live systems in a full deployment, if it's natural to mention.
+- Never claim to have live sensor access.
 - Keep responses under ~120 words unless the user asks for more detail.`;
 
 export async function POST(req: NextRequest) {
@@ -38,21 +38,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const anthropic = getAnthropicClient();
+    const model = getAIClient();
 
-    const system = language
+    const systemInstruction = language
       ? `${SYSTEM_PROMPT}\n\nThe fan has selected "${language}" as their preferred language. Reply in ${language} regardless of what language they type in.`
       : SYSTEM_PROMPT;
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 500,
-      system,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    const chat = model.startChat({
+      history: messages.slice(0, -1).map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      })),
+      systemInstruction,
     });
 
-    const textBlock = response.content.find((c) => c.type === 'text');
-    const reply = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    const lastMessage = messages[messages.length - 1].content;
+    const result = await chat.sendMessage(lastMessage);
+    const reply = result.response.text();
 
     return NextResponse.json({ reply });
   } catch (err: any) {
