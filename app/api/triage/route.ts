@@ -3,7 +3,7 @@ import { getAIClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
 
-const SYSTEM_PROMPT = `You are the Safety & Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium. You will receive a description of what a stadium CCTV camera is seeing. Return a JSON object with exactly these fields: "severity" (low/medium/high/critical), "riskScore" (integer 1-10), "category" (short label), "recommendedAction" (one specific actionable sentence), "dispatchRecommended" (boolean). Return ONLY the JSON object, no additional text.`;
+const SYSTEM_PROMPT = `You are the Safety and Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium. You will receive a description of what a stadium CCTV camera is seeing. Return a JSON object with exactly these fields: severity (low/medium/high/critical), riskScore (integer 1-10), category (short label), recommendedAction (one specific actionable sentence), dispatchRecommended (boolean). Return ONLY the JSON object, no additional text.`;
 
 export async function POST(req: NextRequest) {
   try {
