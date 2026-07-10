@@ -3,7 +3,7 @@ import { getAIClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
 
-const SYSTEM_PROMPT = `You are the Safety and Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium. You will receive a description of what a stadium CCTV camera is seeing. Return a JSON object with exactly these fields: severity (low/medium/high/critical), riskScore (integer 1-10), category (short label), recommendedAction (one specific actionable sentence), dispatchRecommended (boolean). Return ONLY the JSON object, no additional text.`;
+const SYSTEM_PROMPT = `You are the Safety and Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium. You will receive a description of what a stadium CCTV camera is seeing. Return a JSON object with exactly these fields: severity (low/medium/high/critical), riskScore (integer 1-10), category (short label), recommendedAction (one specific actionable sentence), dispatchRecommended (boolean). Return ONLY the JSON object, no additional text or markdown.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,16 +17,9 @@ export async function POST(req: NextRequest) {
 
     const model = getAIClient();
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `Camera: ${camera ?? 'Unknown'}\n\nDescription: ${description}\n\nProvide the triage assessment as JSON.` }],
-        },
-      ],
-      systemInstruction: SYSTEM_PROMPT,
-    });
+    const prompt = `${SYSTEM_PROMPT}\n\nCamera: ${camera ?? 'Unknown'}\n\nDescription: ${description}\n\nProvide the triage assessment as JSON only.`;
 
+    const result = await model.generateContent(prompt);
     const rawText = result.response.text();
 
     let triageResult;
@@ -47,7 +40,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error('Triage error:', err);
     return NextResponse.json(
-      { error: err?.message ?? 'Something went wrong running triage.' },
+      { error: err?.message ?? 'Something went wrong.' },
       { status: 500 }
     );
   }

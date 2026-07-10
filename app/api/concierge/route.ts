@@ -22,30 +22,29 @@ export async function POST(req: NextRequest) {
 
     const model = getAIClient();
 
-    const systemText = language
-      ? `${SYSTEM_PROMPT}\n\nThe fan has selected "${language}" as their preferred language. Reply in ${language} regardless of what language they type in.`
-      : SYSTEM_PROMPT;
+    const langNote = language ? `\n\nIMPORTANT: Reply in ${language} regardless of what language the user types in.` : '';
+    const allMessages = [
+      { role: 'user' as const, content: `System instructions: ${SYSTEM_PROMPT}${langNote}\n\nNow help the fan with their questions.` },
+      { role: 'model' as const, content: 'Understood! I am the stadium concierge. How can I help you?' },
+      ...messages,
+    ];
 
-    const history = messages.slice(0, -1).map((m) => ({
-      role: m.role === 'assistant' ? 'model' as const : 'user' as const,
+    const history = allMessages.slice(0, -1).map((m) => ({
+      role: m.role === 'model' ? 'model' as const : 'user' as const,
       parts: [{ text: m.content }],
     }));
 
-    const lastMessage = messages[messages.length - 1].content;
+    const lastMessage = allMessages[allMessages.length - 1].content;
 
-    const chat = model.startChat({
-      history,
-      systemInstruction: systemText,
-    });
-
+    const chat = model.startChat({ history });
     const result = await chat.sendMessage(lastMessage);
     const reply = result.response.text();
 
     return NextResponse.json({ reply });
   } catch (err: any) {
-    console.error('Concierge chat error:', err);
+    console.error('Concierge error:', err);
     return NextResponse.json(
-      { error: err?.message ?? 'Something went wrong talking to the concierge.' },
+      { error: err?.message ?? 'Something went wrong.' },
       { status: 500 }
     );
   }
