@@ -39,11 +39,6 @@ function seededRandom(seed: number) {
   return x - Math.floor(x);
 }
 
-/**
- * Generates a plausible, slightly randomized snapshot of gate conditions.
- * `tick` lets callers advance the simulation over time (e.g. every 8s) so
- * the dashboard feels live without needing a real sensor feed.
- */
 export function generateGates(tick = 0): Gate[] {
   return GATE_DEFS.map((g, i) => {
     const base = 4 + i * 2.5;
@@ -108,10 +103,6 @@ export interface ForecastPoint {
   predictedAvgWait: number;
 }
 
-/**
- * Predictive crowd forecast — simulates what a real CV + arrival-rate model
- * would output: a 45-minute look-ahead curve the ops copilot can narrate.
- */
 export function generateForecast(tick = 0, stats?: StadiumStats): ForecastPoint[] {
   const baseOccupancy = stats?.capacityPct ?? 60;
   const baseWait = stats?.avgWaitMinutes ?? 8;
@@ -119,7 +110,7 @@ export function generateForecast(tick = 0, stats?: StadiumStats): ForecastPoint[
   for (let i = 0; i <= 9; i++) {
     const minutesFromNow = i * 5;
     const drift = Math.sin((tick + i) * 0.6) * 6;
-    const rampToKickoff = i * 2.2; // demand climbs as kickoff approaches
+    const rampToKickoff = i * 2.2;
     points.push({
       label: minutesFromNow === 0 ? 'Now' : `+${minutesFromNow}m`,
       minutesFromNow,
