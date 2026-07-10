@@ -3,19 +3,7 @@ import { getAIClient } from '@/lib/ai';
 
 export const runtime = 'nodejs';
 
-const SYSTEM_PROMPT = `You are the Safety & Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium.
-
-You will receive a natural-language description of what a stadium CCTV camera is seeing, as if produced by a vision-language model.
-
-Return a JSON object with exactly these fields:
-- "severity": one of "low", "medium", "high", "critical"
-- "riskScore": integer 1-10 (1 = negligible, 10 = imminent danger)
-- "category": short label (e.g. "crowding", "unattended item", "medical", "altercation", "normal")
-- "recommendedAction": one specific, actionable sentence for the shift supervisor
-- "dispatchRecommended": boolean — true only if security/medical dispatch is warranted right now
-
-Be conservative: when in doubt, lean slightly toward higher severity. Never invent details not in the description.
-Return ONLY the JSON object, no additional text.`;
+const SYSTEM_PROMPT = `You are the Safety & Anomaly Triage Copilot inside a FIFA World Cup 2026 stadium. You will receive a description of what a stadium CCTV camera is seeing. Return a JSON object with exactly these fields: "severity" (low/medium/high/critical), "riskScore" (integer 1-10), "category" (short label), "recommendedAction" (one specific actionable sentence), "dispatchRecommended" (boolean). Return ONLY the JSON object, no additional text.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,10 +12,7 @@ export async function POST(req: NextRequest) {
     const camera: string | undefined = body.camera;
 
     if (!description) {
-      return NextResponse.json(
-        { error: 'Request must include a description field.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Request must include a description field.' }, { status: 400 });
     }
 
     const model = getAIClient();
@@ -39,7 +24,7 @@ export async function POST(req: NextRequest) {
           parts: [{ text: `Camera: ${camera ?? 'Unknown'}\n\nDescription: ${description}\n\nProvide the triage assessment as JSON.` }],
         },
       ],
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
     });
 
     const rawText = result.response.text();

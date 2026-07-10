@@ -8,22 +8,7 @@ interface ChatMessage {
   content: string;
 }
 
-const SYSTEM_PROMPT = `You are the official AI Fan Concierge for a FIFA World Cup 2026 host stadium.
-
-Your job: help fans quickly and warmly, in whatever language they write to you in (always reply in the same language they used, or the language they request).
-
-You can help with:
-- Wayfinding to gates, seats, restrooms, concessions, and accessible entrances
-- Explaining stadium policies (bag policy, re-entry, prohibited items) in general, sensible terms
-- Transit and parking guidance
-- Lost & found, medical points, and family/accessibility services
-- General matchday atmosphere questions (what time gates open, what to expect)
-
-Style rules:
-- Be warm, concise, and concrete. Prefer short paragraphs or a short list over long prose.
-- If you don't have a specific real-time fact (like an exact live queue time), say so honestly and give the most helpful general guidance instead of inventing a precise number.
-- Never claim to have live sensor access.
-- Keep responses under ~120 words unless the user asks for more detail.`;
+const SYSTEM_PROMPT = `You are the official AI Fan Concierge for a FIFA World Cup 2026 host stadium. Help fans quickly and warmly, in whatever language they write to you in. You can help with wayfinding, stadium policies, transit, and accessibility. Be warm, concise, and concrete. Keep responses under ~120 words.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,27 +17,27 @@ export async function POST(req: NextRequest) {
     const language: string | undefined = body.language;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json(
-        { error: 'Request must include a non-empty messages array.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Request must include a non-empty messages array.' }, { status: 400 });
     }
 
     const model = getAIClient();
 
-    const systemInstruction = language
+    const systemText = language
       ? `${SYSTEM_PROMPT}\n\nThe fan has selected "${language}" as their preferred language. Reply in ${language} regardless of what language they type in.`
       : SYSTEM_PROMPT;
 
-    const chat = model.startChat({
-      history: messages.slice(0, -1).map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      })),
-      systemInstruction,
-    });
+    const history = messages.slice(0, -1).map((m) => ({
+      role: m.role === 'assistant' ? 'model' as const : 'user' as const,
+      parts: [{ text: m.content }],
+    }));
 
     const lastMessage = messages[messages.length - 1].content;
+
+    const chat = model.startChat({
+      history,
+      systemInstruction: { parts: [{ text: systemText }] },
+    });
+
     const result = await chat.sendMessage(lastMessage);
     const reply = result.response.text();
 
