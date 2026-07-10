@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
           parts: [{ text: `Camera: ${camera ?? 'Unknown'}\n\nDescription: ${description}\n\nProvide the triage assessment as JSON.` }],
         },
       ],
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: SYSTEM_PROMPT,
     });
 
     const rawText = result.response.text();

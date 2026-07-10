@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
           parts: [{ text: `Here is the current live snapshot:\n\n${snapshot}\n\nGenerate the briefing now.` }],
         },
       ],
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: SYSTEM_PROMPT,
     });
 
     const briefing = result.response.text();
